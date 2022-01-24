@@ -48,17 +48,26 @@ router.post("/verify", (req, res) => {
 router.post("/new", (req, res) => {
   try {
     const { name, password } = req.body;
-    if (!name || !password) {
-      res.sendStatus(400);
-      return;
+    if (name === undefined) {
+      return res.status(400).json("Nebylo zadáno jméno.");
+    }
+    if (
+      !/^[a-zA-Z0-9èàùìòÈÀÒÙÌéáúíóÉÁÚÍÓëäüïöËÄÜÏÖêâûîôÊÂÛÎÔç'-]*$/.test(name)
+    ) {
+      return res.status(400).json("Jméno obsahuje nepovolené znaky.");
+    }
+    if (password === undefined) {
+      return res.status(400).json("Nebylo zadáno heslo.");
+    }
+    if (password.length < 4) {
+      return res.status(400).json("Heslo musí obsahovat alespoň 4 znaky.");
     }
 
     conQuery(
       `SELECT * FROM \`uzivatele\` WHERE username='${name}'`,
       (result) => {
         if (result.length !== 0) {
-          res.status(400).json("Username already exists.");
-          return;
+          return res.status(400).json("Jméno již existuje.");
         }
 
         conQuery(
@@ -67,14 +76,14 @@ router.post("/new", (req, res) => {
           )}')`,
           ({ insertId }) => {
             res.json({
-              userJwt: jwt.sign({ userId: insertId, name }, SECRET_KEY),
+              jwt: jwt.sign({ id: insertId, name }, SECRET_KEY),
             });
           }
         );
       }
     );
   } catch {
-    res.sendStatus(403);
+    res.sendStatus(400);
   }
 });
 

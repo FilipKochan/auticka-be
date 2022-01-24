@@ -1,0 +1,7 @@
+POST http://localhost:3001/user/login
+content-type: application/json
+
+{
+    "name": "v4",
+    "password": "isdawae"
+}

@@ -10,24 +10,23 @@ router.post("/login", (req, res) => {
   try {
     const { name, password } = req.body;
     if (!name || !password) {
-      res.sendStatus(403);
-      return;
+      return res.sendStatus(403);
     }
 
     conQuery(`SELECT * FROM uzivatele WHERE username='${name}'`, (result) => {
       if (result.length !== 1) {
-        res.sendStatus(403);
-        return;
+        return res.sendStatus(403);
       }
       const passwordHash = result[0].password;
       const verified = bcrypt.compareSync(password, passwordHash);
       if (!verified) {
-        res.status(403).json("Incorrect password.");
-        return;
+        return res.sendStatus(403);
       }
 
       res.json({
-        userJwt: jwt.sign({ userId: result[0].iduzivatel, name }, SECRET_KEY),
+        jwt: jwt.sign({ id: result[0].iduzivatel, name }, SECRET_KEY),
+        name,
+        id: result[0].iduzivatel,
       });
     });
   } catch {
@@ -35,11 +34,22 @@ router.post("/login", (req, res) => {
   }
 });
 
+router.post("/verify", (req, res) => {
+  try {
+    const token = req.body?.jwt;
+    if (!token) return res.sendStatus(403);
+    if (jwt.verify(token, SECRET_KEY)) return res.sendStatus(200);
+    return res.sendStatus(403);
+  } catch {
+    return res.sendStatus(403);
+  }
+});
+
 router.post("/new", (req, res) => {
   try {
     const { name, password } = req.body;
     if (!name || !password) {
-      res.sendStatus(403);
+      res.sendStatus(400);
       return;
     }
 

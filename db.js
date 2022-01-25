@@ -17,4 +17,4 @@ const conQuery = (query, callback) => {
   });
 };
 
-module.exports = { conQuery };
+module.exports = { conQuery, con };

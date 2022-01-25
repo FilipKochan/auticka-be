@@ -1,5 +1,5 @@
 const express = require("express");
-const { conQuery } = require("../db");
+const { conQuery, con } = require("../db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv/config");
@@ -13,22 +13,25 @@ router.post("/login", (req, res) => {
       return res.sendStatus(403);
     }
 
-    conQuery(`SELECT * FROM uzivatele WHERE username='${name}'`, (result) => {
-      if (result.length !== 1) {
-        return res.sendStatus(403);
-      }
-      const passwordHash = result[0].password;
-      const verified = bcrypt.compareSync(password, passwordHash);
-      if (!verified) {
-        return res.sendStatus(403);
-      }
+    conQuery(
+      `SELECT * FROM uzivatele WHERE username=${con.escape(name)}`,
+      (result) => {
+        if (result.length !== 1) {
+          return res.sendStatus(403);
+        }
+        const passwordHash = result[0].password;
+        const verified = bcrypt.compareSync(password, passwordHash);
+        if (!verified) {
+          return res.sendStatus(403);
+        }
 
-      res.json({
-        jwt: jwt.sign({ id: result[0].iduzivatel, name }, SECRET_KEY),
-        name,
-        id: result[0].iduzivatel,
-      });
-    });
+        res.json({
+          jwt: jwt.sign({ id: result[0].iduzivatel, name }, SECRET_KEY),
+          name,
+          id: result[0].iduzivatel,
+        });
+      }
+    );
   } catch {
     res.sendStatus(403);
   }
@@ -64,16 +67,16 @@ router.post("/new", (req, res) => {
     }
 
     conQuery(
-      `SELECT * FROM \`uzivatele\` WHERE username='${name}'`,
+      `SELECT * FROM \`uzivatele\` WHERE username=${con.escape(name)}`,
       (result) => {
         if (result.length !== 0) {
           return res.status(400).json("Jméno již existuje.");
         }
 
         conQuery(
-          `INSERT INTO \`uzivatele\`(\`username\`, \`password\`) VALUES ('${name}', '${bcrypt.hashSync(
-            password
-          )}')`,
+          `INSERT INTO \`uzivatele\`(\`username\`, \`password\`) VALUES (${con.escape(
+            name
+          )}, '${bcrypt.hashSync(password)}')`,
           ({ insertId }) => {
             res.json({
               jwt: jwt.sign({ id: insertId, name }, SECRET_KEY),

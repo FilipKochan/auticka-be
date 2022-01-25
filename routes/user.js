@@ -2,13 +2,19 @@ const express = require("express");
 const { conQuery, con } = require("../db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 require("dotenv/config");
 const router = express.Router();
 const SECRET_KEY = process.env.JSON_WEB_TOKEN_SECRET;
 
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, password, token } = req.body;
+    const isHuman = await validateHuman(token);
+    if (!isHuman) {
+      return res.status(403).json("Captcha nebyla správně vyplněna!");
+    }
+
     if (!name || !password) {
       return res.sendStatus(403);
     }
@@ -25,17 +31,25 @@ router.post("/login", (req, res) => {
           return res.sendStatus(403);
         }
 
-        res.json({
+        return res.json({
           jwt: jwt.sign({ id: result[0].iduzivatel, name }, SECRET_KEY),
           name,
           id: result[0].iduzivatel,
         });
       }
     );
-  } catch {
-    res.sendStatus(403);
+  } catch (e) {
+    res.status(403);
   }
 });
+
+const validateHuman = async (token) => {
+  const secret = process.env.SECRET_KEY;
+  const response = await axios.post(
+    `https://google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
+  );
+  return response.data.success;
+};
 
 router.post("/verify", (req, res) => {
   try {
@@ -48,9 +62,15 @@ router.post("/verify", (req, res) => {
   }
 });
 
-router.post("/new", (req, res) => {
+router.post("/new", async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, password, token } = req.body;
+
+    const isHuman = await validateHuman(token);
+    if (!isHuman) {
+      return res.status(403).json("Captcha nebyla správně vyplněna!");
+    }
+
     if (name === undefined) {
       return res.status(400).json("Nebylo zadáno jméno.");
     }

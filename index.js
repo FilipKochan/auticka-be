@@ -5,6 +5,7 @@ const app = express();
 const port = 3001;
 
 const user = require("./routes/user");
+const tests = require("./routes/tests");
 
 app.use(bodyParser.json());
 app.use(
@@ -14,8 +15,9 @@ app.use(
 );
 
 app.use("/user", user);
+app.use("/tests", tests);
 
-app.get("/", (req, res) =>
+app.get("/", (_, res) =>
   res.send(
     'This is the api for <a href="https://nakrizovatkysrozumem.cz">nakrizovatkysrozumem.cz</a>.'
   )

@@ -3,7 +3,8 @@ content-type: application/json
 
 {
     "name": "v4",
-    "password": "isdawae"
+    "password": "isdawae",
+    "token": "xxxxxxxx"
 }
 
 ###
@@ -13,4 +14,37 @@ content-type: application/json
 
 {
     "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJuYW1lIjoidjQiLCJpYXQiOjE2NDMwNDA2MTh9.LvNcdIbg2Q5ovw1-2g2UZmWVtIFGXNxLnEP1KIjygok"
+}
+
+###
+
+POST http://localhost:3001/tests/new
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJuYW1lIjoidjQiLCJpYXQiOjE2NDMwNDA2MTh9.LvNcdIbg2Q5ovw1-2g2UZmWVtIFGXNxLnEP1KIjygok
+
+{
+    "length": 10,
+    "difficulty": "hard"
+}
+
+###
+
+POST http://localhost:3001/tests/new
+Content-Type: application/json
+
+{
+    "length": 10,
+    "difficulty": "medium"
+}
+
+
+###
+// neplatne jwt
+POST http://localhost:3001/tests/new
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+
+{
+    "length": 50,
+    "difficulty": "medium"
 }

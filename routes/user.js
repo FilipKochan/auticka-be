@@ -7,17 +7,30 @@ require("dotenv/config");
 const router = express.Router();
 const SECRET_KEY = process.env.JSON_WEB_TOKEN_SECRET;
 
+router.use(async (req, res, next) => {
+  if (req.url === "/verify") {
+    return next();
+  }
+  const { name, password, token } = req.body;
+
+  if (!(await validateHuman(token))) {
+    return res.status(403).json("Captcha nebyla správně vyplněna!");
+  }
+
+  if (!name) {
+    return res.status(400).json("Nebylo zadáno jméno.");
+  }
+
+  if (!password) {
+    return res.status(400).json("Nebylo zadáno heslo.");
+  }
+
+  next();
+});
+
 router.post("/login", async (req, res) => {
   try {
-    const { name, password, token } = req.body;
-    const isHuman = await validateHuman(token);
-    if (!isHuman) {
-      return res.status(403).json("Captcha nebyla správně vyplněna!");
-    }
-
-    if (!name || !password) {
-      return res.sendStatus(403);
-    }
+    const { name, password } = req.body;
 
     conQuery(
       `SELECT * FROM uzivatele WHERE username=${con.escape(name)}`,
@@ -43,44 +56,14 @@ router.post("/login", async (req, res) => {
   }
 });
 
-const validateHuman = async (token) => {
-  const secret = process.env.SECRET_KEY;
-  const response = await axios.post(
-    `https://google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
-  );
-  return response.data.success;
-};
-
-router.post("/verify", (req, res) => {
-  try {
-    const token = req.body?.jwt;
-    if (!token) return res.sendStatus(403);
-    if (jwt.verify(token, SECRET_KEY)) return res.sendStatus(200);
-    return res.sendStatus(403);
-  } catch {
-    return res.sendStatus(403);
-  }
-});
-
 router.post("/new", async (req, res) => {
   try {
-    const { name, password, token } = req.body;
+    const { name, password } = req.body;
 
-    const isHuman = await validateHuman(token);
-    if (!isHuman) {
-      return res.status(403).json("Captcha nebyla správně vyplněna!");
-    }
-
-    if (name === undefined) {
-      return res.status(400).json("Nebylo zadáno jméno.");
-    }
     if (
       !/^[a-zA-Z0-9èàùìòÈÀÒÙÌéáúíóÉÁÚÍÓëäüïöËÄÜÏÖêâûîôÊÂÛÎÔç'-]*$/.test(name)
     ) {
       return res.status(400).json("Jméno obsahuje nepovolené znaky.");
-    }
-    if (password === undefined) {
-      return res.status(400).json("Nebylo zadáno heslo.");
     }
     if (password.length < 4) {
       return res.status(400).json("Heslo musí obsahovat alespoň 4 znaky.");
@@ -109,5 +92,24 @@ router.post("/new", async (req, res) => {
     res.sendStatus(400);
   }
 });
+
+router.post("/verify", (req, res) => {
+  try {
+    const token = req.body?.jwt;
+    if (!token) return res.sendStatus(403);
+    if (jwt.verify(token, SECRET_KEY)) return res.sendStatus(200);
+    return res.sendStatus(403);
+  } catch {
+    return res.sendStatus(403);
+  }
+});
+
+const validateHuman = async (token) => {
+  const secret = process.env.SECRET_KEY;
+  const response = await axios.post(
+    `https://google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`
+  );
+  return response.data.success;
+};
 
 module.exports = router;

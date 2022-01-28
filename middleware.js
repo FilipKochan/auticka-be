@@ -15,11 +15,14 @@ const chechJWT = async (req, res, next) => {
       return res.sendStatus(403);
     }
 
-    const { userId } = jwt.verify(userJwt, process.env.JSON_WEB_TOKEN_SECRET);
-    req.body.userId = userId;
+    const { id } = jwt.verify(userJwt, process.env.JSON_WEB_TOKEN_SECRET);
+    if (id === undefined) {
+      return res.status(403).json("Neplatná autorizace.");
+    }
+    req.body.userId = id;
     return next();
   } catch {
-    res.status(403).json("Invalid authorisation.");
+    res.status(403).json("Neplatná autorizace.");
   }
 };
 

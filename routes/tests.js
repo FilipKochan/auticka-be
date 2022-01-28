@@ -1,6 +1,5 @@
 const express = require("express");
 const { conQuery, con } = require("../db");
-const jwt = require("jsonwebtoken");
 const { TEST_LENGTHS, TEST_DIFFICULTIES } = require("../constants");
 const { getSQLFromDifficulty } = require("../utils");
 require("dotenv/config");
@@ -52,11 +51,16 @@ router.post("/new", (req, res) => {
 router.use("/:testId/:question", (req, res, next) => {
   const { testId } = req.params;
   conQuery(
-    `SELECT iduzivatele FROM zaznamytestu WHERE idtestu = ${testId}`,
+    `SELECT iduzivatele, typtestu FROM zaznamytestu WHERE idtestu = ${testId}`,
     (result) => {
-      if (result[0].iduzivatele !== req.body.userId) {
-        return res.status(403).json("You can acces only your own tests!");
+      if (!result[0]) {
+        return res.status(400).json("Daný test neexistuje!");
       }
+      if (result[0].iduzivatele !== req.body.userId) {
+        return res.status(403).json("K této otázce nemáte přístup!");
+      }
+
+      req.body.testLength = result[0].typtestu;
       return next();
     }
   );
@@ -97,11 +101,37 @@ router.get("/:testId/:question", (req, res) => {
                 vyslednaSituace.mapa = situace[0].mapa;
                 vyslednaSituace.otazka = situace[0].otazka;
 
-                res.json(vyslednaSituace);
+                res.json({
+                  vyslednaSituace: vyslednaSituace,
+                  testLength: req.body.testLength,
+                });
               }
             );
           }
         );
+      }
+    );
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+router.post("/:testId/:question", (req, res) => {
+  try {
+    const { userAnswer } = req.body;
+    const { testId, question } = req.params;
+    if (userAnswer === undefined || typeof userAnswer !== "number") {
+      return res.status(400).json("Odpověď není validní.");
+    }
+    conQuery(
+      `UPDATE \`zaznamyodpovedi\` SET \`idodpovedi\` = ${con.escape(
+        userAnswer
+      )} WHERE idtestu = ${testId} AND poradivtestu = ${question} AND idodpovedi IS NULL`,
+      ({ affectedRows }) => {
+        if (affectedRows === 1) {
+          return res.sendStatus(200);
+        }
+        res.status(400).json("Nelze odpovědět na již zodpovězenou otázku.");
       }
     );
   } catch {

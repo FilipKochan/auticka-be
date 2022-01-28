@@ -6,7 +6,7 @@ const port = 3001;
 
 const user = require("./routes/user");
 const tests = require("./routes/tests");
-
+const { chechJWT } = require("./middleware");
 app.use(bodyParser.json());
 app.use(
   cors({
@@ -14,6 +14,7 @@ app.use(
   })
 );
 
+app.use(chechJWT);
 app.use("/user", user);
 app.use("/tests", tests);
 

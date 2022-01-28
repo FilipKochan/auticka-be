@@ -95,10 +95,11 @@ router.post("/new", async (req, res) => {
 
 router.post("/verify", (req, res) => {
   try {
-    const token = req.body?.jwt;
-    if (!token) return res.sendStatus(403);
-    if (jwt.verify(token, SECRET_KEY)) return res.sendStatus(200);
-    return res.sendStatus(403);
+    if (req.body.userId === 0) {
+      return res.status(403).json("Invalid authorisation.");
+    }
+
+    return res.sendStatus(200);
   } catch {
     return res.sendStatus(403);
   }

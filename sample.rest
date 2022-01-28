@@ -11,10 +11,7 @@ content-type: application/json
 
 POST http://localhost:3001/user/verify
 content-type: application/json
-
-{
-    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJuYW1lIjoidjQiLCJpYXQiOjE2NDMwNDA2MTh9.LvNcdIbg2Q5ovw1-2g2UZmWVtIFGXNxLnEP1KIjygok"
-}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJuYW1lIjoidjQiLCJpYXQiOjE2NDMwNDA2MTh9.LvNcdIbg2Q5ovw1-2g2UZmWVtIFGXNxLnEP1KIjygok
 
 ###
 
@@ -48,3 +45,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
     "length": 50,
     "difficulty": "medium"
 }
+
+###
+
+GET http://localhost:3001/tests/65/4
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJuYW1lIjoidjQiLCJpYXQiOjE2NDMwNDA2MTh9.LvNcdIbg2Q5ovw1-2g2UZmWVtIFGXNxLnEP1KIjygok

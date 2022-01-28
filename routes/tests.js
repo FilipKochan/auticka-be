@@ -2,23 +2,12 @@ const express = require("express");
 const { conQuery, con } = require("../db");
 const jwt = require("jsonwebtoken");
 const { TEST_LENGTHS, TEST_DIFFICULTIES } = require("../constants");
+const { getSQLFromDifficulty } = require("../utils");
 require("dotenv/config");
 const router = express.Router();
 
-router.use(async (req, res, next) => {
+router.use("/new", async (req, res, next) => {
   try {
-    const { authorization } = req.headers;
-    if (!authorization) {
-      req.body.userId = 0;
-      return next();
-    }
-
-    const regexp = /Bearer (.*)/;
-    const userJwt = authorization.match(regexp)[1];
-    if (!userJwt) {
-      return res.sendStatus(403);
-    }
-
     const { length, difficulty } = req.body;
 
     if (
@@ -28,8 +17,6 @@ router.use(async (req, res, next) => {
       return res.status(400).json("Invalid test parameters!");
     }
 
-    const { userId } = jwt.verify(userJwt, process.env.JSON_WEB_TOKEN_SECRET);
-    req.body.userId = userId;
     return next();
   } catch {
     res.sendStatus(403);
@@ -62,19 +49,64 @@ router.post("/new", (req, res) => {
   }
 });
 
-router.get("/:testId/:question", (req, res) => {});
+router.use("/:testId/:question", (req, res, next) => {
+  const { testId } = req.params;
+  conQuery(
+    `SELECT iduzivatele FROM zaznamytestu WHERE idtestu = ${testId}`,
+    (result) => {
+      if (result[0].iduzivatele !== req.body.userId) {
+        return res.status(403).json("You can acces only your own tests!");
+      }
+      return next();
+    }
+  );
+});
+router.get("/:testId/:question", (req, res) => {
+  try {
+    const { testId, question } = req.params;
+    const vyslednaSituace = {};
+    conQuery(
+      `SELECT spawn, trasa, rychlost, prednostnijizda, idauta 
+      FROM autasituace 
+      NATURAL JOIN zaznamyodpovedi 
+      WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
+      (auta) => {
+        if (!auta[0]) return res.status(400).json("Question does not exist.");
+        vyslednaSituace.auta = auta;
 
-const getSQLFromDifficulty = (difficulty) => {
-  switch (difficulty) {
-    case "easy":
-      return "ORDER BY kolikratspatnezodpovezeno";
-    case "medium":
-      return "ORDER BY RAND()";
-    case "hard":
-      return "ORDER BY kolikratspatnezodpovezeno DESC";
-    default:
-      return "";
+        conQuery(
+          `SELECT odpoved, odpovedisituace.idodpovedi 
+          FROM odpovedisituace 
+          INNER JOIN zaznamyodpovedi 
+          USING(idsituace)
+          WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
+          (odpovedi) => {
+            if (!odpovedi[0])
+              return res.status(400).json("Question does not exist.");
+
+            vyslednaSituace.odpovedi = odpovedi;
+            conQuery(
+              `SELECT mapa, otazka 
+              FROM situace 
+              NATURAL JOIN zaznamyodpovedi 
+              WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
+              (situace) => {
+                if (!situace[0])
+                  return res.status(400).json("Question does not exist.");
+
+                vyslednaSituace.mapa = situace[0].mapa;
+                vyslednaSituace.otazka = situace[0].otazka;
+
+                res.json(vyslednaSituace);
+              }
+            );
+          }
+        );
+      }
+    );
+  } catch {
+    res.sendStatus(500);
   }
-};
+});
 
 module.exports = router;

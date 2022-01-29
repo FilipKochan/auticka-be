@@ -48,7 +48,7 @@ router.post("/new", (req, res) => {
   }
 });
 
-router.use("/:testId/:question", (req, res, next) => {
+const doesUserHasTest = (req, res, next) => {
   const { testId } = req.params;
   conQuery(
     `SELECT iduzivatele, typtestu FROM zaznamytestu WHERE idtestu = ${testId}`,
@@ -64,7 +64,64 @@ router.use("/:testId/:question", (req, res, next) => {
       return next();
     }
   );
+};
+
+router.use("/results/:testId", doesUserHasTest);
+
+router.get("/results/:testId", (req, res) => {
+  const { testId } = req.params;
+  conQuery(
+    `
+    SELECT 
+      pocetspravnychodpovedi pocetspravnych, typtestu delka, poradivtestu poradi, otazka, o.idodpovedi idodpovedi, 
+      z.idodpovedi odpoveduzivatele, spravnaodpoved, idsituace, odpoved textodpovedi
+    FROM 
+      (situace INNER JOIN odpovedisituace o USING(idsituace)) 
+        INNER JOIN zaznamyodpovedi z USING(idsituace)
+        NATURAl JOIN zaznamytestu
+        WHERE idtestu = ${con.escape(testId)}
+        ORDER BY poradivtestu
+    `,
+    (result) => {
+      if (!result) return res.sendStatus(400);
+      testResultResponse = {};
+      testResultResponse["correctAnswers"] = result[0].pocetspravnych;
+      testResultResponse["totalQuestions"] = result[0].delka;
+      testResultResponse["situations"] = [];
+
+      result.forEach(
+        ({
+          poradi,
+          otazka,
+          idodpovedi,
+          odpoveduzivatele,
+          spravnaodpoved,
+          idsituace,
+          textodpovedi,
+        }) => {
+          if (testResultResponse["situations"][poradi] === undefined) {
+            const situace = {};
+            situace["situationId"] = idsituace;
+            situace["question"] = otazka;
+            situace["correctAnswer"] = spravnaodpoved;
+            situace["userAnswer"] = odpoveduzivatele;
+            situace["possibleAnswers"] = [];
+            testResultResponse["situations"][poradi] = situace;
+          }
+          testResultResponse["situations"][poradi]["possibleAnswers"].push({
+            answerId: idodpovedi,
+            answerText: textodpovedi,
+          });
+        }
+      );
+
+      res.json(testResultResponse);
+    }
+  );
 });
+
+router.use("/:testId/:question", doesUserHasTest);
+
 router.get("/:testId/:question", (req, res) => {
   try {
     const { testId, question } = req.params;
@@ -75,7 +132,7 @@ router.get("/:testId/:question", (req, res) => {
       NATURAL JOIN zaznamyodpovedi 
       WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
       (auta) => {
-        if (!auta[0]) return res.status(400).json("Question does not exist.");
+        if (!auta[0]) return res.status(400).json("Daná otázka neexistuje.");
         vyslednaSituace.auta = auta;
 
         conQuery(
@@ -86,7 +143,7 @@ router.get("/:testId/:question", (req, res) => {
           WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
           (odpovedi) => {
             if (!odpovedi[0])
-              return res.status(400).json("Question does not exist.");
+              return res.status(400).json("Daná otázka neexistuje.");
 
             vyslednaSituace.odpovedi = odpovedi;
             conQuery(
@@ -96,7 +153,7 @@ router.get("/:testId/:question", (req, res) => {
               WHERE idtestu = ${testId} AND poradivtestu = ${question}`,
               (situace) => {
                 if (!situace[0])
-                  return res.status(400).json("Question does not exist.");
+                  return res.status(400).json("Daná otázka neexistuje.");
 
                 vyslednaSituace.mapa = situace[0].mapa;
                 vyslednaSituace.otazka = situace[0].otazka;

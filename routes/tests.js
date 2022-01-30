@@ -106,6 +106,7 @@ router.get("/results/:testId", (req, res) => {
             situace["correctAnswer"] = spravnaodpoved;
             situace["userAnswer"] = odpoveduzivatele;
             situace["possibleAnswers"] = [];
+            situace["order"] = poradi;
             testResultResponse["situations"][poradi] = situace;
           }
           testResultResponse["situations"][poradi]["possibleAnswers"].push({
